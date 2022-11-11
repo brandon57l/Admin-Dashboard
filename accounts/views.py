@@ -1,8 +1,9 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
 
-# from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import Group
 
 from .decorators import *
 from .models import *
@@ -19,7 +20,17 @@ def register(request):
     if request.method == 'POST':
         form = CreateUserForm(request.POST)
         if form.is_valid():
-            form.save()
+            user = form.save()
+            
+            group = Group.objects.get(name='customer')
+            user.groups.add(group)
+
+            Customer.objects.create(
+                    user=user,
+                    name=user.username,
+                    email=user.email
+                )
+
             username = form.cleaned_data.get('username')
             messages.success(request, f'Account was created for {username}.')
             return redirect('login')
@@ -51,11 +62,13 @@ def login_page(request):
 
     return render(request, 'login.html', data)
 
+@login_required(login_url='login')
 def logout_user(request):
     logout(request)
     return redirect('login')
 
 # @access_authorization(['admin'])
+@login_required(login_url='login')
 @admin_only
 def home(request):
     orders = Order.objects.all()
@@ -71,17 +84,27 @@ def home(request):
     
     return render(request, 'dashboard.html', data)
 
+@login_required(login_url='login')
 @access_authorization(['admin','customer'])
 def user_page(request):
-    data = {}
+    customer = request.user.customer
+
+    total_orders = customer.order_set.all().count()
+    orders = Order.objects.filter(customer__name=customer.name)
+    orders_delivered = orders.filter(status="Delivered").count()
+    orders_pending = orders.filter(status="Pending").count()
+
+    data = {'total_orders':total_orders, 'orders':orders, 'orders_delivered':orders_delivered, 'orders_pending':orders_pending}
     return render(request, 'user.html', data)
 
+@login_required(login_url='login')
 @access_authorization(['admin'])
 def products(request):
     products = Product.objects.all()
     data = {'products':products}
     return render(request, 'products.html', data)
 
+@login_required(login_url='login')
 @access_authorization(['admin'])
 def customer(request, id):
     customer = Customer.objects.get(id=id)
@@ -94,6 +117,7 @@ def customer(request, id):
 
     return render(request, 'customer.html', data)
 
+@login_required(login_url='login')
 @access_authorization(['admin'])
 def create_customer(request):
     data = {'form':CustomerForm()}
@@ -106,6 +130,7 @@ def create_customer(request):
 
     return render(request, 'customer_form.html', data)
 
+@login_required(login_url='login')
 @access_authorization(['admin'])
 def update_customer(request, id):
     customer = Customer.objects.get(id=id)
@@ -119,6 +144,7 @@ def update_customer(request, id):
 
     return render(request, 'customer_form.html', data)
 
+@login_required(login_url='login')
 @access_authorization(['admin'])
 def delete_customer(request, id):
     customer = Customer.objects.get(id=id)
@@ -130,6 +156,7 @@ def delete_customer(request, id):
 
     return render(request, 'delete_customer.html', data)
 
+@login_required(login_url='login')
 @access_authorization(['admin'])
 def create_order(request):
     data = {'form':OrderForm()}
@@ -142,6 +169,7 @@ def create_order(request):
 
     return render(request, 'order_form.html', data)
 
+@login_required(login_url='login')
 @access_authorization(['admin'])
 def update_order(request, id):
     order = Order.objects.get(id=id)
@@ -155,6 +183,7 @@ def update_order(request, id):
 
     return render(request, 'order_form.html', data)
 
+@login_required(login_url='login')
 @access_authorization(['admin'])
 def delete_order(request, id):
     order = Order.objects.get(id=id)

@@ -5,4 +5,21 @@
 
 <h1>User Profile</h1>
 
+<div class="card card-body">
+    <table class="table table-sm">
+        <tr>
+            <th>Product</th>
+            <th>Date Orderd</th>
+            <th>Status</th>
+        </tr>
+        {% for o in orders %}
+            <tr>
+                <td>{{o.product}}</td>
+                <td>{{o.date_created}}</td>
+                <td>{{o.status}}</td>
+            </tr>
+        {% endfor %}
+    </table>
+</div>
+
 {% endblock %}
