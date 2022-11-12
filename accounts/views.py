@@ -21,17 +21,8 @@ def register(request):
         form = CreateUserForm(request.POST)
         if form.is_valid():
             user = form.save()
-            
-            group = Group.objects.get(name='customer')
-            user.groups.add(group)
-
-            Customer.objects.create(
-                    user=user,
-                    name=user.username,
-                    email=user.email
-                )
-
             username = form.cleaned_data.get('username')
+
             messages.success(request, f'Account was created for {username}.')
             return redirect('login')
         
@@ -96,6 +87,21 @@ def user_page(request):
 
     data = {'total_orders':total_orders, 'orders':orders, 'orders_delivered':orders_delivered, 'orders_pending':orders_pending}
     return render(request, 'user.html', data)
+
+@login_required(login_url='login')
+@access_authorization(['customer'])
+def account_settings(request):
+    customer = request.user.customer
+    form = CustomerForm(instance=customer)
+    
+    if request.method == 'POST':
+        form = CustomerForm(request.POST, request.FILES, instance=customer)
+        if form.is_valid():
+            form.save()
+
+    context = {'form':form}
+    return render(request, 'account_settings.html', context)
+
 
 @login_required(login_url='login')
 @access_authorization(['admin'])
